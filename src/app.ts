@@ -3,6 +3,8 @@ import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
 import { Engine, Scene, ArcRotateCamera, Vector2, Vector3, Color3, Matrix, Color4, StandardMaterial, DirectionalLight, Mesh, MeshBuilder, VertexBuffer } from "@babylonjs/core";
 
+//Please check end of file for implementation logic
+
 //create canvas
 var canvas = document.createElement("canvas");
 canvas.style.width = "100%";
@@ -34,8 +36,7 @@ dirLight.intensity = 0.5;
 
 //cube Mesh
 var box: Mesh = MeshBuilder.CreateBox("box", {height: 1, width: 1, depth: 1, updatable: true}, scene);
-
-// Create material and assign it to the cube
+box.position = Vector3.Zero();
 var material = new StandardMaterial('material', scene);
 material.diffuseColor = new Color3(1, 0, 0);
 box.material = material;
@@ -53,6 +54,7 @@ var lastMousePositionY = null;
 var extrusionDistance = 0;
 var selFaceIndices;
 var positions;
+var faceNormal;
 
 //Event listener to handle click action on Cube
 canvas.addEventListener("click", function(event) {
@@ -62,10 +64,17 @@ canvas.addEventListener("click", function(event) {
         if (pickResult.hit && pickResult.pickedMesh === box) {
             faceSelected = pickResult.faceId;
             extrusionEnabled = true;
-            lastMousePositionX = event.clientX
-            lastMousePositionY = event.clientY
+            lastMousePositionX = event.clientX;
+            lastMousePositionY = event.clientY;
 
-            setAllIndicesAttachedtoFace()
+            setAllIndicesAttachedtoFace();
+
+            //Vector normal to the face
+            faceNormal = new Vector3(
+            box.getFacetNormal(faceSelected).x,
+            box.getFacetNormal(faceSelected).y,
+            box.getFacetNormal(faceSelected).z
+          );
         }
     } else {
         extrusionEnabled = false;
@@ -78,13 +87,6 @@ canvas.addEventListener("mousemove", function(event){
     if(extrusionEnabled && faceSelected){
 
         var mouseMovementVector = mouseMovement(event, lastMousePositionX, lastMousePositionY);
-        
-        //Vector normal to the face
-        var faceNormal = new Vector3(
-            box.getFacetNormal(faceSelected).x,
-            box.getFacetNormal(faceSelected).y,
-            box.getFacetNormal(faceSelected).z
-          );
         
         //Extrusion distance is set as 0.0075 units by trail and error due to time constraint, it can be set dynamically based on movement of mouse
         //This will also take care that the transition of shapes is smooth i.e, animation is proper.
@@ -104,7 +106,8 @@ canvas.addEventListener("mousemove", function(event){
 
         //extrusion is scaled to extrusionDistance
         scaleVector = scaleVector.scale(extrusionDistance);
-        
+
+        //Required positions of cube is updated.        
         for (var i = 0; i < selFaceIndices.length; i++) {
             var index = selFaceIndices[i];
             positions[index*3] *= (1 + scaleVector.x);
@@ -137,12 +140,13 @@ function mouseMovement(event: any, lastMousePosX: number, lastMousePosY: number)
     return mouseMovementVector;
 }
 
+//Check if an array is inside another array of arrays
 function isSubArray(subArray, array) {
     return array.some(item => {
     return item.length === subArray.length && item.every((value, index) => value === subArray[index]);
     });
 }
-
+//Select all the indices that are on the vertices of selected face.
 function setAllIndicesAttachedtoFace(){
     positions = box.getVerticesData(VertexBuffer.PositionKind);
     var faceIndices = box.getIndices();
@@ -176,7 +180,6 @@ function setAllIndicesAttachedtoFace(){
         }
 
     }
-
     selFaceIndices = Array.from(new Set(selFaceIndices));
 }
 
@@ -184,3 +187,23 @@ function setAllIndicesAttachedtoFace(){
 engine.runRenderLoop(() => {
     scene.render();
 });
+
+/*
+Core implementation is as follows:
+    1. There are two eventsListeners on canvas, one when mouse is clicked and other when mouse moves.
+    2. If mouse is clicked on any face and not already clicked on any of the faces of the cube then faceSelected is initialized and extrusionEnabled is set to true.
+    3. If mouse is clicked anywhere and it was already clicked on any face then faceSelected is set to null and extrusionEnabled to false.
+    4. Now, case 2 happens then selFaceIndices[] is populated with all the indices that the sides have including the indices from adjacent faces. 
+       Also, position of mouse is captured and normal vector to the face on which mouse was clicked is calculated.
+    5. When extrusionEnabled is true and mouse moves, then vector for the movement of mouse is obtaied and dot product of this vector with normal to the face is calculated.
+    6. Scale of extrusion(extrusionDistance) for the mouse movement is set as 0.0075, which seems in line with mouse movement, this is hardcoded for now, but can be 
+       implemented based on the distance of movement of the mouse.
+    7. The extrusion will take place in the diretion of normal of selected face or opposite of it, based on dot product and direction of normal.
+    8. Finally, a for loop is ran to update positions(vertices of sides), to update the position of the cube.
+
+Logic for function setAllIndicesAttachedtoFace():
+    1. All the positions (vertices of each side) is obtained, face indices are also calculated for selected face and stored in selFaceIndices.
+    2. As each vertex shares 3 faces, so each vertex has 3 positions, so in order to make sure the geometry of cube is not broken, all the positions and thereby indices 
+       are calculated which share the vertices of the selected face.
+    3. Once we have all the indices in selFaceIndices, it is used in the event listener function to update positions of the cube.
+*/
