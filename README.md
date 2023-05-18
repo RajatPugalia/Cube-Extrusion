@@ -14,5 +14,5 @@ This project creates a cube on a canvas and the cube can be extruded by selectin
     3. npm install --save-dev html-webpack-plugin
     4. npm install --save-dev webpack-dev-server
     5. npm run start --> Make sure port 8080 is not in use
-4. Open any browser (chrome preffered) and run "http://localhost:8080/" to run the project.
+4. Open any browser (chrome preferred) and run "http://localhost:8080/" to run the project.
 5. Once the project loads, the screen should show a cube, you can select the sides of the cube and extrude it.
