@@ -16,7 +16,9 @@ document.body.appendChild(canvas);
 var engine = new Engine(canvas, true);
 var scene = new Scene(engine);
 
-var camera: ArcRotateCamera = new ArcRotateCamera("Camera", -3*Math.PI / 4, Math.PI / 4, 4, Vector3.Zero(), scene);
+var camera: ArcRotateCamera = new ArcRotateCamera("Camera", 0, 0, 5, new Vector3(1, 1, 1), scene);
+camera.setPosition(new Vector3(0, 0, 4));
+camera.target = new Vector3(0, 0, 0);
 camera.attachControl(canvas, true);
 
 // Create directional light
@@ -36,7 +38,7 @@ dirLight.intensity = 0.5;
 
 //cube Mesh
 var box: Mesh = MeshBuilder.CreateBox("box", {height: 1, width: 1, depth: 1, updatable: true}, scene);
-box.position = Vector3.Zero();
+box.position = new Vector3(-2, 0, 0);
 var material = new StandardMaterial('material', scene);
 material.diffuseColor = new Color3(1, 0, 0);
 box.material = material;
@@ -46,8 +48,14 @@ box.enableEdgesRendering();
 box.edgesWidth = 1;
 box.edgesColor = new Color4(0, 0, 1, 1);
 
+//Sphere
+const sphere = MeshBuilder.CreateSphere("sphere", { diameter: 1 }, scene);
+sphere.material = material;
+sphere.position = new Vector3(2, 0, 0);
+
 //declare and initialize variables
 var extrusionEnabled = false;
+var extrusionEnabledSphere = false;
 var faceSelected = null;
 var lastMousePositionX = null;
 var lastMousePositionY = null;
@@ -58,12 +66,18 @@ var faceNormal;
 
 //Event listener to handle click action on Cube
 canvas.addEventListener("click", function(event) {
-    if (!extrusionEnabled) {
+    if (!extrusionEnabled && !extrusionEnabledSphere) {
         var pickResult = scene.pick(event.clientX, event.clientY);
-        //If click is on any object and it is box object
-        if (pickResult.hit && pickResult.pickedMesh === box) {
-            faceSelected = pickResult.faceId;
+
+        if (pickResult.pickedMesh === box){
             extrusionEnabled = true;
+        }
+        else if (pickResult.pickedMesh === sphere){
+            extrusionEnabledSphere = true;
+        }
+        //If click is on any object and it is box object
+        if (pickResult.hit && pickResult.pickedMesh === box && extrusionEnabled) {
+            faceSelected = pickResult.faceId;
             lastMousePositionX = event.clientX;
             lastMousePositionY = event.clientY;
 
@@ -76,8 +90,13 @@ canvas.addEventListener("click", function(event) {
             box.getFacetNormal(faceSelected).z
           );
         }
+        else if (pickResult.hit && pickResult.pickedMesh === sphere  && extrusionEnabledSphere){
+            lastMousePositionX = event.clientX;
+            lastMousePositionY = event.clientY;
+        }
     } else {
         extrusionEnabled = false;
+        extrusionEnabledSphere = false;
         faceSelected = null;
     }
 });
@@ -119,6 +138,16 @@ canvas.addEventListener("mousemove", function(event){
         box.refreshBoundingInfo();
         box.enableEdgesRendering();
     }
+
+    if (extrusionEnabledSphere) {
+        const deltaX = event.clientX - lastMousePositionX;
+        lastMousePositionX = event.clientX;
+        const sensitivity = 0.001; // Adjust the sensitivity of the diameter change
+
+        // Update the diameter of the sphere based on mouse movement
+        const newDiameter = sphere.scaling.x + deltaX * sensitivity;
+        sphere.scaling = new Vector3(newDiameter, newDiameter, newDiameter);
+      }
 })
 
 //method to calculate movement of mouse Vector
@@ -182,6 +211,40 @@ function setAllIndicesAttachedtoFace(){
     }
     selFaceIndices = Array.from(new Set(selFaceIndices));
 }
+
+//reset sphere
+const resetSphereButton = document.createElement("button");
+resetSphereButton.textContent = "Reset Sphere";
+resetSphereButton.style.position = 'absolute';
+resetSphereButton.style.bottom = '20px';
+resetSphereButton.style.left = '20%';
+resetSphereButton.style.transform = 'translateX(-50%)';
+canvas.parentNode.appendChild(resetSphereButton);
+
+// Add click event listener to the reset button
+resetSphereButton.addEventListener("click", () => {
+    sphere.scaling = new Vector3(1, 1, 1);
+});
+
+//reset cube
+const resetCubeButton = document.createElement("button");
+resetCubeButton.textContent = "Reset Cube";
+resetCubeButton.style.position = 'absolute';
+resetCubeButton.style.bottom = '20px';
+resetCubeButton.style.left = '80%';
+resetCubeButton.style.transform = 'translateX(-50%)';
+canvas.parentNode.appendChild(resetCubeButton);
+
+// Add click event listener to the reset button
+resetCubeButton.addEventListener("click", () => {
+    var boxDup: Mesh = MeshBuilder.CreateBox("boxDup", {height: 1, width: 1, depth: 1, updatable: true}, scene);
+    boxDup.position = new Vector3(-2, 0, 0);
+
+    box.updateVerticesData(VertexBuffer.PositionKind, boxDup.getVerticesData(VertexBuffer.PositionKind));
+    box.refreshBoundingInfo();
+    box.enableEdgesRendering();
+    boxDup.dispose();
+});
 
 // run the main render loop
 engine.runRenderLoop(() => {
