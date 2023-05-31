@@ -1,7 +1,7 @@
 import "@babylonjs/core/Debug/debugLayer";
 import "@babylonjs/inspector";
 import "@babylonjs/loaders/glTF";
-import { Engine, Scene, ArcRotateCamera, Vector2, Vector3, Color3, Matrix, Color4, StandardMaterial, DirectionalLight, Mesh, MeshBuilder, VertexBuffer } from "@babylonjs/core";
+import { Engine, Scene, ArcRotateCamera, Vector3, Color3, Color4, StandardMaterial, DirectionalLight, Mesh, MeshBuilder, VertexBuffer } from "@babylonjs/core";
 
 //Please check end of file for implementation logic
 
@@ -39,80 +39,86 @@ var box: Mesh = MeshBuilder.CreateBox("box", {height: 1, width: 1, depth: 1, upd
 box.position = Vector3.Zero();
 var material = new StandardMaterial('material', scene);
 material.diffuseColor = new Color3(1, 0, 0);
+material.alpha = 0.5;
 box.material = material;
+box.isPickable = true;
 
 //Show edges of the cube
 box.enableEdgesRendering();
 box.edgesWidth = 1;
 box.edgesColor = new Color4(0, 0, 1, 1);
 
+var planeMaterial = new StandardMaterial("planeMaterial", scene);
+planeMaterial.alpha = 0;  // Transparency of the plane
+
 //declare and initialize variables
 var extrusionEnabled = false;
 var faceSelected = null;
-var lastMousePositionX = null;
-var lastMousePositionY = null;
-var extrusionDistance = 0;
 var selFaceIndices;
 var positions;
 var faceNormal;
+var planeMesh;
+var startPoint;
+var endPoint;
 
 //Event listener to handle click action on Cube
 canvas.addEventListener("click", function(event) {
     if (!extrusionEnabled) {
         var pickResult = scene.pick(event.clientX, event.clientY);
-        //If click is on any object and it is box object
+
+        //If click is on any mesh and it is box mesh
         if (pickResult.hit && pickResult.pickedMesh === box) {
+            if(planeMesh){
+                planeMesh.dispose();
+            }
             faceSelected = pickResult.faceId;
             extrusionEnabled = true;
-            lastMousePositionX = event.clientX;
-            lastMousePositionY = event.clientY;
+            box.isPickable = false;
+            startPoint = pickResult.pickedPoint;
 
             setAllIndicesAttachedtoFace();
 
             //Vector normal to the face
-            faceNormal = new Vector3(
-            box.getFacetNormal(faceSelected).x,
-            box.getFacetNormal(faceSelected).y,
-            box.getFacetNormal(faceSelected).z
-          );
+            faceNormal = pickResult.getNormal();
+            var rotVector: Vector3 = faceNormal;
+
+            if(faceNormal.z != 0){
+                rotVector = new Vector3(1, 1, 0);
+            }
+            
+            planeMesh = MeshBuilder.CreatePlane("plane", { size: Number.MAX_SAFE_INTEGER }, scene);
+            planeMesh.position = startPoint;
+            planeMesh.rotation = rotVector.scale(Math.PI / 2);
+            planeMesh.material = planeMaterial;           
         }
     } else {
+        box.isPickable = true;
         extrusionEnabled = false;
         faceSelected = null;
+        if(planeMesh){
+            planeMesh.dispose();
+        }
     }
 });
 
 //Event listener to handle movement of mouse after clicking on cube
-canvas.addEventListener("mousemove", function(event){
+canvas.addEventListener("mousemove", function(){
     if(extrusionEnabled && faceSelected){
+        var mouseMovementVector = mouseMovement();
 
-        var mouseMovementVector = mouseMovement(event, lastMousePositionX, lastMousePositionY);
-        
-        //Extrusion distance is set as 0.0075 units by trail and error due to time constraint, it can be set dynamically based on movement of mouse
-        //This will also take care that the transition of shapes is smooth i.e, animation is proper.
-        extrusionDistance = 0.0075;
-
-        //Dot product of normal to the face and movement of mouse, which will be later used to check if we want to increase or drcrease size
+        //Dot product of normal to the face and movement of mouse
         var dot = Vector3.Dot(faceNormal, mouseMovementVector)
+        var projection = dot/faceNormal.length();//Project of movement along normal of face
 
-        //Direction of extrusion
-        var scaleVector = faceNormal;
-
-        if(dot < 0 && Vector3.Dot(faceNormal, new Vector3(1, 1, 1)) > 0)
-            scaleVector = faceNormal.negate();
-
-        else if(dot > 0 && Vector3.Dot(faceNormal, new Vector3(1, 1, 1)) < 0)
-            scaleVector = faceNormal.negate();
-
-        //extrusion is scaled to extrusionDistance
-        scaleVector = scaleVector.scale(extrusionDistance);
+        //Direction of extrusion is along face normal and magnitude is value of projection
+        var scaleVector = faceNormal.scale(projection);;
 
         //Required positions of cube is updated.        
         for (var i = 0; i < selFaceIndices.length; i++) {
             var index = selFaceIndices[i];
-            positions[index*3] *= (1 + scaleVector.x);
-            positions[index*3 + 1] *= (1 + scaleVector.y);
-            positions[index*3 + 2] *= (1 + scaleVector.z);
+            positions[index*3] += (scaleVector.x);
+            positions[index*3 + 1] += (scaleVector.y);
+            positions[index*3 + 2] += (scaleVector.z);
         }
 
         box.updateVerticesData(VertexBuffer.PositionKind, positions);
@@ -122,21 +128,16 @@ canvas.addEventListener("mousemove", function(event){
 })
 
 //method to calculate movement of mouse Vector
-function mouseMovement(event: any, lastMousePosX: number, lastMousePosY: number){
-    // Convert the mouse positions to viewport coordinates
-    var startViewportPos = new Vector2(lastMousePositionX / canvas.width, lastMousePositionY / canvas.height);
-    var endViewportPos = new Vector2(event.clientX / canvas.width, event.clientY / canvas.height);
+function mouseMovement(){
 
-    lastMousePositionX = event.clientX
-    lastMousePositionY = event.clientY
-
-    // Get the coordinates of the mouse positions in the scene to find the movement of mouse
-    var startRay = scene.createPickingRay(startViewportPos.x, startViewportPos.y, Matrix.Identity(), camera);
-    var endRay = scene.createPickingRay(endViewportPos.x, endViewportPos.y, Matrix.Identity(), camera);
-    var startPoint = startRay.origin;
-    var endPoint = endRay.origin;
-
-    var mouseMovementVector = endPoint.subtract(startPoint);
+    var mouseMovementVector;
+    var pickResult = scene.pick(scene.pointerX, scene.pointerY);
+    
+    if (pickResult.hit && pickResult.pickedMesh === planeMesh) {
+        endPoint = pickResult.pickedPoint;
+        mouseMovementVector = endPoint.subtract(startPoint);
+        startPoint = endPoint;
+    }
     return mouseMovementVector;
 }
 
