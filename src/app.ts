@@ -195,11 +195,10 @@ Core implementation is as follows:
     2. If mouse is clicked on any face and not already clicked on any of the faces of the cube then faceSelected is initialized and extrusionEnabled is set to true.
     3. If mouse is clicked anywhere and it was already clicked on any face then faceSelected is set to null and extrusionEnabled to false.
     4. Now, case 2 happens then selFaceIndices[] is populated with all the indices that the sides have including the indices from adjacent faces. 
-       Also, position of mouse is captured and normal vector to the face on which mouse was clicked is calculated.
+       Also, a plane is created parallel to normal and passing through the point where the mouse was clicked.
     5. When extrusionEnabled is true and mouse moves, then vector for the movement of mouse is obtaied and dot product of this vector with normal to the face is calculated.
-    6. Scale of extrusion(extrusionDistance) for the mouse movement is set as 0.0075, which seems in line with mouse movement, this is hardcoded for now, but can be 
-       implemented based on the distance of movement of the mouse.
-    7. The extrusion will take place in the diretion of normal of selected face or opposite of it, based on dot product and direction of normal.
+    6. Scale of extrusion will be same as the mouseMovementVector projection along the normal of the face, same is calculated and implemented.
+    7. The extrusion will take place in the diretion of normal of selected face or opposite of it..
     8. Finally, a for loop is ran to update positions(vertices of sides), to update the position of the cube.
 
 Logic for function setAllIndicesAttachedtoFace():
