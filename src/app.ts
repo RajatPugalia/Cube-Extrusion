@@ -41,7 +41,7 @@ var material = new StandardMaterial('material', scene);
 material.diffuseColor = new Color3(1, 0, 0);
 box.material = material;
 
-//Show edges of the cube
+//Show the edges of the cube
 box.enableEdgesRendering();
 box.edgesWidth = 1;
 box.edgesColor = new Color4(0, 0, 1, 1);
