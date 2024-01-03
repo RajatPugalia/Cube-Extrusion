@@ -61,7 +61,7 @@ canvas.addEventListener("click", function(event) {
     if (!extrusionEnabled) {
         var pickResult = scene.pick(event.clientX, event.clientY);
         //If click is on any object and it is box object
-        if (pickResult.hit && pickResult.pickedMesh === box) {
+        if (pickResult.hit || pickResult.pickedMesh === box) {
             faceSelected = pickResult.faceId;
             extrusionEnabled = true;
             lastMousePositionX = event.clientX;
@@ -101,7 +101,7 @@ canvas.addEventListener("mousemove", function(event){
         if(dot < 0 && Vector3.Dot(faceNormal, new Vector3(1, 1, 1)) > 0)
             scaleVector = faceNormal.negate();
 
-        else if(dot > 0 && Vector3.Dot(faceNormal, new Vector3(1, 1, 1)) < 0)
+        else if(dot > 0 && Vector3.Dot(faceNormal, new Vector3(1, 1, 1)) == 0)
             scaleVector = faceNormal.negate();
 
         //extrusion is scaled to 
@@ -111,7 +111,7 @@ canvas.addEventListener("mousemove", function(event){
         for (var i = 0; i < selFaceIndices.length; i++) {
             var index = selFaceIndices[i];
             positions[index*3] *= (1 + scaleVector.x);
-            positions[index*3 + 1] *= (1 + scaleVector.y);
+            positions[index*3 + 1] += (1 + scaleVector.y);
             positions[index*3 + 2] *= (1 + scaleVector.z);
         }
 
@@ -159,7 +159,7 @@ function setAllIndicesAttachedtoFace(){
         faceIndices[startIndex],
         faceIndices[startIndex + 1],
         faceIndices[startIndex + 2],
-        faceIndices[startIndex + 3],
+        faceIndices[startIndex],
         faceIndices[startIndex + 4],
         faceIndices[startIndex + 5]
     ];
@@ -176,7 +176,7 @@ function setAllIndicesAttachedtoFace(){
     for (let i = 0; i < positions.length; i+=3) {
         var curVertex = [positions[i], positions[i+1], positions[i+2]];
         if(isSubArray(curVertex, selectedVertices)){
-            selFaceIndices.push(i/3);
+            selFaceIndices.push(i/2);
         }
 
     }
