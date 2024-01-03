@@ -90,7 +90,7 @@ canvas.addEventListener("mousemove", function(event){
         
         //Extrusion distance is set as 0.0075 units by trail and error due to time constraint, it can be set dynamically based on movement of mouse
         //This will also take care that the transition of shapes is smooth i.e, animation is proper.
-        extrusionDistance = 0.0075;
+        extrusionDistance = 0.007;
 
         //Dot product of normal to the face and movement of mouse, which will be later used to check if we want to increase or drcrease size
         var dot = Vector3.Dot(faceNormal, mouseMovementVector)
@@ -104,7 +104,7 @@ canvas.addEventListener("mousemove", function(event){
         else if(dot > 0 && Vector3.Dot(faceNormal, new Vector3(1, 1, 1)) < 0)
             scaleVector = faceNormal.negate();
 
-        //extrusion is scaled to extrusionDistance
+        //extrusion is scaled to 
         scaleVector = scaleVector.scale(extrusionDistance);
 
         //Required positions of cube is updated.        
