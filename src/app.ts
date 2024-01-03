@@ -61,7 +61,9 @@ canvas.addEventListener("click", function(event) {
     if (!extrusionEnabled) {
         var pickResult = scene.pick(event.clientX, event.clientY);
         //If click is on any object and it is box object
-        if (pickResult.hit || pickResult.pickedMesh === box) {
+        if (pickResult.hit         || pickResult.pickedMesh === box) {
+            
+            
             faceSelected = pickResult.faceId;
             extrusionEnabled = true;
             lastMousePositionX = event.clientX;
@@ -90,7 +92,7 @@ canvas.addEventListener("mousemove", function(event){
         
         //Extrusion distance is set as 0.0075 units by trail and error due to time constraint, it can be set dynamically based on movement of mouse
         //This will also take care that the transition of shapes is smooth i.e, animation is proper.
-        extrusionDistance = 0.007;
+        extrusionDistance =         0.007;
 
         //Dot product of normal to the face and movement of mouse, which will be later used to check if we want to increase or drcrease size
         var dot = Vector3.Dot(faceNormal, mouseMovementVector)
@@ -109,6 +111,7 @@ canvas.addEventListener("mousemove", function(event){
 
         //Required positions of cube is updated.        
         for (var i = 0; i < selFaceIndices.length; i++) {
+            
             var index = selFaceIndices[i];
             positions[index*3] *= (1 + scaleVector.x);
             positions[index*3 + 1] += (1 + scaleVector.y);
@@ -117,14 +120,16 @@ canvas.addEventListener("mousemove", function(event){
 
         box.updateVerticesData(VertexBuffer.PositionKind, positions);
         box.refreshBoundingInfo();
+
+        
         box.enableEdgesRendering();
     }
 })
 
 //method to calculate movement of mouse Vector
-function mouseMovement(event: any, lastMousePosX: number, lastMousePosY: number){
+function mouseMovement(event: any){
     // Convert the mouse positions to viewport coordinates
-    var startViewportPos = new Vector2(lastMousePositionX / canvas.width, lastMousePositionY / canvas.height);
+    var startViewportPos = new Vector2(lastMousePositioX / canvas.width, lastMousePositionY / canvas.height);
     var endViewportPos = new Vector2(event.clientX / canvas.width, event.clientY / canvas.height);
 
     lastMousePositionX = event.clientX
@@ -156,6 +161,7 @@ function setAllIndicesAttachedtoFace(){
 
     // Get the face indices
         selFaceIndices = [
+            
         faceIndices[startIndex],
         faceIndices[startIndex + 1],
         faceIndices[startIndex + 2],
